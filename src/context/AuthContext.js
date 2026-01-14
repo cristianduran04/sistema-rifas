@@ -14,20 +14,30 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (u) {
-        const snap = await getDoc(doc(db, 'users', u.uid))
+        const ref = doc(db, 'users', u.uid)
+        const snap = await getDoc(ref)
+
+        if (snap.exists()) {
+          setRol(snap.data().rol)
+          console.log('ROL DETECTADO:', snap.data().rol)
+        } else {
+          setRol('user')
+          console.log('NO EXISTE DOC USER')
+        }
+
         setUser(u)
-        setRol(snap.exists() ? snap.data().rol : 'user')
       } else {
         setUser(null)
         setRol(null)
       }
+
       setLoading(false)
     })
 
-    return unsub
+    return () => unsub()
   }, [])
 
-  if (loading) return null   // 👈 CLAVE
+  if (loading) return null
 
   return (
     <AuthContext.Provider value={{ user, rol }}>

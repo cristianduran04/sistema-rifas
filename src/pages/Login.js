@@ -14,11 +14,13 @@ export default function Login() {
 
     const res = await signInWithEmailAndPassword(auth, email, password)
 
-    // 🔥 LEEMOS EL ROL DESPUÉS DE LOGUEAR
-    const snap = await getDoc(doc(db, 'users', res.user.uid))
-    const rol = snap.exists() ? snap.data().rol : 'user'
+    const ref = doc(db, 'users', res.user.uid)
+    const snap = await getDoc(ref)
 
-    // 🔥 REDIRECCIÓN CORRECTA
+    const rol = snap.exists() ? snap.data().rol : 'user'
+    console.log('ROL LOGIN:', rol)
+
+    // 🔥 AQUÍ ESTÁ LA CLAVE
     if (rol === 'admin') {
       navigate('/admin')
     } else {
@@ -27,7 +29,7 @@ export default function Login() {
   }
 
   return (
-    <form onSubmit={login}>
+    <form onSubmit={login} style={{ padding: 40 }}>
       <h2>Iniciar sesión</h2>
 
       <input

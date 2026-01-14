@@ -1,0 +1,94 @@
+.rifa-container {
+  display: flex;
+  justify-content: center;
+  padding: 15px;
+}
+
+.rifa-card {
+  max-width: 900px;
+  width: 100%;
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 8px 20px rgba(0,0,0,.1);
+}
+
+.rifa-info {
+  display: flex;
+  justify-content: space-between;
+  margin: 15px 0;
+  font-weight: bold;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.numeros-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+  gap: 8px;
+  margin-top: 15px;
+}
+
+.numero {
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  background: #eee;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.numero.activo {
+  background: #000;
+  color: #fff;
+}
+
+.numero.vendido {
+  background: #c62828;
+  color: #fff;
+  cursor: not-allowed;
+}
+
+.acciones {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.btn-comprar {
+  width: 100%;
+  padding: 15px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: none;
+  background: #000;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* 📱 MOBILE */
+@media (max-width: 600px) {
+  .rifa-card {
+    padding: 15px;
+  }
+
+  .numero {
+    padding: 10px;
+    font-size: 14px;
+  }
+}
+
+
+
+.datos-comprador {
+  margin-top: 20px;
+  display: grid;
+  gap: 10px;
+}
+
+.datos-comprador input,
+.datos-comprador select {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
