@@ -1,0 +1,72 @@
+/* Contenedor principal */
+.crear-rifa-page {
+  min-height: 100vh;
+  background: #f4f6f8;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 30px 15px;
+}
+
+/* Tarjeta */
+.crear-rifa-card {
+  width: 100%;
+  max-width: 480px;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+}
+
+/* Título */
+.crear-rifa-card h2 {
+  text-align: center;
+  margin-bottom: 25px;
+  color: #1f2937;
+}
+
+/* Inputs y select */
+.crear-rifa-card input,
+.crear-rifa-card select {
+  width: 90%;
+  padding: 12px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 15px;
+}
+
+.crear-rifa-card input:focus,
+.crear-rifa-card select:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+/* Botón */
+.crear-rifa-card button {
+  width: 100%;
+  padding: 14px;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.crear-rifa-card button:hover {
+  background: #1d4ed8;
+}
+
+/* Responsive móvil */
+@media (max-width: 480px) {
+  .crear-rifa-card {
+    padding: 20px;
+  }
+
+  .crear-rifa-card h2 {
+    font-size: 20px;
+  }
+}

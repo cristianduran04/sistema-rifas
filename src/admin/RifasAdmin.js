@@ -7,6 +7,9 @@ import {
   addDoc
 } from 'firebase/firestore'
 import { db } from '../firebase/config'
+import '../styles/rifasAdmin.css'
+
+
 
 export default function RifasAdmin() {
   const [rifas, setRifas] = useState([])
@@ -99,19 +102,14 @@ export default function RifasAdmin() {
   }
 
   return (
-    <div style={{ padding: 20 }}>
-      <h2>🎛 Panel de Rifas</h2>
+  <div className="rifas-admin-page">
+    <h2>🎛 Gestión de Rifas</h2>
 
-      {rifas.map(r => (
-        <div
-          key={r.id}
-          style={{
-            border: '1px solid #ccc',
-            padding: 15,
-            marginBottom: 15,
-            borderRadius: 6
-          }}
-        >
+    {/* ACTIVAS */}
+    <h3 className="section-title">🟢 Rifas Activas</h3>
+    <div className="rifas-grid">
+      {rifas.filter(r => r.estado === 'activa').map(r => (
+        <div key={r.id} className="rifa-card activa">
           {editandoId === r.id ? (
             <>
               <input
@@ -125,10 +123,7 @@ export default function RifasAdmin() {
                 type="number"
                 value={formEdit.precioNumero}
                 onChange={e =>
-                  setFormEdit({
-                    ...formEdit,
-                    precioNumero: e.target.value
-                  })
+                  setFormEdit({ ...formEdit, precioNumero: e.target.value })
                 }
               />
 
@@ -136,10 +131,7 @@ export default function RifasAdmin() {
                 type="number"
                 value={formEdit.totalNumeros}
                 onChange={e =>
-                  setFormEdit({
-                    ...formEdit,
-                    totalNumeros: e.target.value
-                  })
+                  setFormEdit({ ...formEdit, totalNumeros: e.target.value })
                 }
               />
 
@@ -155,51 +147,61 @@ export default function RifasAdmin() {
                 <option value="Santander">Santander</option>
               </select>
 
-              <button onClick={() => guardarEdicion(r.id)}>Guardar</button>
-              <button onClick={() => setEditandoId(null)}>Cancelar</button>
+              <button className="btn-guardar" onClick={() => guardarEdicion(r.id)}>
+                Guardar
+              </button>
+              <button className="btn-cancelar" onClick={() => setEditandoId(null)}>
+                Cancelar
+              </button>
             </>
           ) : (
             <>
               <h3>{r.titulo}</h3>
-              <p><b>Estado:</b> {r.estado}</p>
               <p><b>Precio:</b> ${r.precioNumero}</p>
-              <p><b>Total números:</b> {r.totalNumeros}</p>
-              <p>
-                <b>Números vendidos:</b>{' '}
-                {ventasPorRifa[r.id] || 0}
-              </p>
+              <p><b>Vendidos:</b> {ventasPorRifa[r.id] || 0}</p>
               <p><b>Lotería:</b> {r.loteria}</p>
-              <p>
-                <b>Sorteo:</b>{' '}
-                {r.fechaSorteo?.toDate().toLocaleString()}
-              </p>
 
-              {r.estado === 'activa' && (
-                <>
-                  <input
-                    type="number"
-                    placeholder="Número ganador"
-                    onChange={e =>
-                      setNumerosGanadores({
-                        ...numerosGanadores,
-                        [r.id]: e.target.value
-                      })
-                    }
-                  />
+              <input
+                type="number"
+                placeholder="Número ganador"
+                onChange={e =>
+                  setNumerosGanadores({
+                    ...numerosGanadores,
+                    [r.id]: e.target.value
+                  })
+                }
+              />
 
-                  <button onClick={() => finalizarRifa(r.id)}>
-                    Finalizar
-                  </button>
+              <button className="btn-finalizar" onClick={() => finalizarRifa(r.id)}>
+                Finalizar
+              </button>
 
-                  <button onClick={() => iniciarEdicion(r)}>
-                    Editar
-                  </button>
-                </>
-              )}
+              <button className="btn-editar" onClick={() => iniciarEdicion(r)}>
+                Editar
+              </button>
             </>
           )}
         </div>
       ))}
     </div>
-  )
+
+    {/* FINALIZADAS */}
+    <h3 className="section-title">⚫ Rifas Finalizadas</h3>
+    <div className="rifas-grid">
+      {rifas.filter(r => r.estado === 'finalizada').map(r => (
+        <div key={r.id} className="rifa-card finalizada">
+          <h3>{r.titulo}</h3>
+          <p><b>Precio:</b> ${r.precioNumero}</p>
+          <p><b>Vendidos:</b> {ventasPorRifa[r.id] || 0}</p>
+          <p><b>Lotería:</b> {r.loteria}</p>
+          <p>
+            <b>Sorteo:</b>{' '}
+            {r.fechaSorteo?.toDate().toLocaleString()}
+          </p>
+        </div>
+      ))}
+    </div>
+  </div>
+)
+
 }

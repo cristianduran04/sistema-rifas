@@ -1,0 +1,101 @@
+/* Página */
+.rifas-admin-page {
+  padding: 20px;
+  background: #f4f6f8;
+  min-height: 100vh;
+}
+
+/* Títulos */
+.rifas-admin-page h2 {
+  margin-bottom: 10px;
+}
+
+.section-title {
+  margin: 25px 0 10px;
+  color: #1f2937;
+  font-size: 18px;
+}
+
+/* Grid de tarjetas */
+.rifas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+/* Tarjeta */
+.rifa-card {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.06);
+  font-size: 14px;
+}
+
+/* Estados */
+.rifa-card.activa {
+  border-left: 5px solid #2563eb;
+}
+
+.rifa-card.finalizada {
+  border-left: 5px solid #6b7280;
+  opacity: 0.9;
+}
+
+/* Título rifa */
+.rifa-card h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+/* Texto */
+.rifa-card p {
+  margin: 3px 0;
+}
+
+/* Inputs */
+.rifa-card input,
+.rifa-card select {
+  width: 90%;
+  padding: 6px;
+  margin: 5px 0;
+  font-size: 13px;
+}
+
+/* Botones */
+.rifa-card button {
+  margin-top: 6px;
+  padding: 7px;
+  width: 100%;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btn-finalizar {
+  background: #dc2626;
+  color: white;
+}
+
+.btn-editar {
+  background: #2563eb;
+  color: white;
+}
+
+.btn-guardar {
+  background: #16a34a;
+  color: white;
+}
+
+.btn-cancelar {
+  background: #6b7280;
+  color: white;
+}
+
+/* Responsive móvil */
+@media (max-width: 480px) {
+  .rifas-admin-page {
+    padding: 15px 10px;
+  }
+}
