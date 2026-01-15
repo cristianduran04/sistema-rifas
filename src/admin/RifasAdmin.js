@@ -9,8 +9,6 @@ import {
 import { db } from '../firebase/config'
 import '../styles/rifasAdmin.css'
 
-
-
 export default function RifasAdmin() {
   const [rifas, setRifas] = useState([])
   const [ventasPorRifa, setVentasPorRifa] = useState({})
@@ -51,7 +49,6 @@ export default function RifasAdmin() {
     }
 
     const comprasSnap = await getDocs(collection(db, 'compras'))
-
     const ganador = comprasSnap.docs.find(c =>
       c.data().rifaId === rifaId &&
       c.data().numero === numeroGanador &&
@@ -66,7 +63,7 @@ export default function RifasAdmin() {
     await addDoc(collection(db, 'ganadores'), {
       rifaId,
       numero: numeroGanador,
-      userId: ganador.data().userId,
+      userId: ganador.data().userId || null,
       creadoEn: new Date()
     })
 
@@ -102,106 +99,126 @@ export default function RifasAdmin() {
   }
 
   return (
-  <div className="rifas-admin-page">
-    <h2>🎛 Gestión de Rifas</h2>
+    <div className="rifas-admin-page">
+      <h2>🎛 Gestión de Rifas</h2>
 
-    {/* ACTIVAS */}
-    <h3 className="section-title">🟢 Rifas Activas</h3>
-    <div className="rifas-grid">
-      {rifas.filter(r => r.estado === 'activa').map(r => (
-        <div key={r.id} className="rifa-card activa">
-          {editandoId === r.id ? (
-            <>
-              <input
-                value={formEdit.titulo}
-                onChange={e =>
-                  setFormEdit({ ...formEdit, titulo: e.target.value })
-                }
-              />
+      {/* ================= ACTIVA ================= */}
+      <h3 className="section-title">🟢 Rifas Activas</h3>
+      <div className="rifas-grid">
+        {rifas.filter(r => r.estado === 'activa').map(r => {
+          const vendidos = ventasPorRifa[r.id] || 0
+          const totalRecaudado = vendidos * r.precioNumero
 
-              <input
-                type="number"
-                value={formEdit.precioNumero}
-                onChange={e =>
-                  setFormEdit({ ...formEdit, precioNumero: e.target.value })
-                }
-              />
+          return (
+            <div key={r.id} className="rifa-card activa">
+              {editandoId === r.id ? (
+                <>
+                  <input
+                    value={formEdit.titulo}
+                    onChange={e =>
+                      setFormEdit({ ...formEdit, titulo: e.target.value })
+                    }
+                  />
 
-              <input
-                type="number"
-                value={formEdit.totalNumeros}
-                onChange={e =>
-                  setFormEdit({ ...formEdit, totalNumeros: e.target.value })
-                }
-              />
+                  <input
+                    type="number"
+                    value={formEdit.precioNumero}
+                    onChange={e =>
+                      setFormEdit({
+                        ...formEdit,
+                        precioNumero: e.target.value
+                      })
+                    }
+                  />
 
-              <select
-                value={formEdit.loteria}
-                onChange={e =>
-                  setFormEdit({ ...formEdit, loteria: e.target.value })
-                }
-              >
-                <option value="Boyacá">Boyacá</option>
-                <option value="Medellín">Medellín</option>
-                <option value="Cruz Roja">Cruz Roja</option>
-                <option value="Santander">Santander</option>
-              </select>
+                  <input
+                    type="number"
+                    value={formEdit.totalNumeros}
+                    onChange={e =>
+                      setFormEdit({
+                        ...formEdit,
+                        totalNumeros: e.target.value
+                      })
+                    }
+                  />
 
-              <button className="btn-guardar" onClick={() => guardarEdicion(r.id)}>
-                Guardar
-              </button>
-              <button className="btn-cancelar" onClick={() => setEditandoId(null)}>
-                Cancelar
-              </button>
-            </>
-          ) : (
-            <>
+                  <select
+                    value={formEdit.loteria}
+                    onChange={e =>
+                      setFormEdit({ ...formEdit, loteria: e.target.value })
+                    }
+                  >
+                    <option value="Boyacá">Boyacá</option>
+                    <option value="Medellín">Medellín</option>
+                    <option value="Cruz Roja">Cruz Roja</option>
+                    <option value="Santander">Santander</option>
+                  </select>
+
+                  <button className="btn-guardar" onClick={() => guardarEdicion(r.id)}>
+                    Guardar
+                  </button>
+                  <button className="btn-cancelar" onClick={() => setEditandoId(null)}>
+                    Cancelar
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h3>{r.titulo}</h3>
+                  <p><b>Precio:</b> ${r.precioNumero}</p>
+                  <p><b>Vendidos:</b> {vendidos}</p>
+                  
+                  <p><b>Lotería:</b> {r.loteria}</p>
+
+                  <input
+                    type="number"
+                    placeholder="Número ganador"
+                    onChange={e =>
+                      setNumerosGanadores({
+                        ...numerosGanadores,
+                        [r.id]: e.target.value
+                      })
+                    }
+                  />
+                  
+
+                  <button className="btn-finalizar" onClick={() => finalizarRifa(r.id)}>
+                    Finalizar
+                  </button>
+
+                  <button className="btn-editar" onClick={() => iniciarEdicion(r)}>
+                    Editar
+                  </button>
+                </>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* ================= FINALIZADAS ================= */}
+      <h3 className="section-title">⚫ Rifas Finalizadas</h3>
+      <div className="rifas-grid">
+        {rifas.filter(r => r.estado === 'finalizada').map(r => {
+          const vendidos = ventasPorRifa[r.id] || 0
+          const totalRecaudado = vendidos * r.precioNumero
+
+          return (
+            <div key={r.id} className="rifa-card finalizada">
               <h3>{r.titulo}</h3>
               <p><b>Precio:</b> ${r.precioNumero}</p>
-              <p><b>Vendidos:</b> {ventasPorRifa[r.id] || 0}</p>
+              <p><b>Vendidos:</b> {vendidos}</p>
               <p><b>Lotería:</b> {r.loteria}</p>
-
-              <input
-                type="number"
-                placeholder="Número ganador"
-                onChange={e =>
-                  setNumerosGanadores({
-                    ...numerosGanadores,
-                    [r.id]: e.target.value
-                  })
-                }
-              />
-
-              <button className="btn-finalizar" onClick={() => finalizarRifa(r.id)}>
-                Finalizar
-              </button>
-
-              <button className="btn-editar" onClick={() => iniciarEdicion(r)}>
-                Editar
-              </button>
-            </>
-          )}
-        </div>
-      ))}
+              <p>
+                <b>Sorteo:</b>{' '}
+                {r.fechaSorteo?.toDate().toLocaleString()}
+              </p>
+              <p className="dinero-final">
+                <b>Total recaudado:</b> ${totalRecaudado.toLocaleString()}
+              </p>
+            </div>
+          )
+        })}
+      </div>
     </div>
-
-    {/* FINALIZADAS */}
-    <h3 className="section-title">⚫ Rifas Finalizadas</h3>
-    <div className="rifas-grid">
-      {rifas.filter(r => r.estado === 'finalizada').map(r => (
-        <div key={r.id} className="rifa-card finalizada">
-          <h3>{r.titulo}</h3>
-          <p><b>Precio:</b> ${r.precioNumero}</p>
-          <p><b>Vendidos:</b> {ventasPorRifa[r.id] || 0}</p>
-          <p><b>Lotería:</b> {r.loteria}</p>
-          <p>
-            <b>Sorteo:</b>{' '}
-            {r.fechaSorteo?.toDate().toLocaleString()}
-          </p>
-        </div>
-      ))}
-    </div>
-  </div>
-)
-
+  )
 }

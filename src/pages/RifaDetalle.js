@@ -7,17 +7,21 @@ import {
   addDoc,
   collection,
   getDocs,
-  serverTimestamp
+  serverTimestamp,
+  query,
+  where
 } from 'firebase/firestore'
 import { useAuth } from '../context/AuthContext'
 import '../styles/rifaDetalle.css'
+
+const WHATSAPP_ADMIN = '573001234567' // 🔥 CAMBIA ESTE NÚMERO
 
 export default function RifaDetalle() {
   const { id } = useParams()
   const { user } = useAuth()
 
   const [rifa, setRifa] = useState(null)
-  const [vendidos, setVendidos] = useState([])
+  const [ocupados, setOcupados] = useState([]) // aprobados + pendientes
   const [seleccionados, setSeleccionados] = useState([])
   const [cargando, setCargando] = useState(false)
 
@@ -30,24 +34,35 @@ export default function RifaDetalle() {
   }, [])
 
   const cargar = async () => {
-    const r = await getDoc(doc(db, 'rifas', id))
-    if (!r.exists()) return
-    setRifa({ id: r.id, ...r.data() })
+    const rifaSnap = await getDoc(doc(db, 'rifas', id))
+    if (!rifaSnap.exists()) return
 
-    const c = await getDocs(collection(db, 'compras'))
-    setVendidos(
-      c.docs
-        .filter(
-          d =>
-            d.data().rifaId === id &&
-            d.data().estado === 'aprobado'
-        )
-        .map(d => d.data().numero)
+    const rifaData = { id: rifaSnap.id, ...rifaSnap.data() }
+    setRifa(rifaData)
+
+    // 🔒 BLOQUEAR aprobados + pendientes
+    const comprasQ = query(
+      collection(db, 'compras'),
+      where('rifaId', '==', id),
+      where('estado', 'in', ['pendiente', 'aprobado'])
     )
+
+    const comprasSnap = await getDocs(comprasQ)
+    setOcupados(comprasSnap.docs.map(d => d.data().numero))
+  }
+
+  // 🔢 Generar números según tipo
+  const generarNumeros = () => {
+    if (!rifa) return []
+
+    let total = rifa.totalNumeros || 0
+    let inicio = rifa.tipoNumero === 'ultimo' ? 0 : 1
+
+    return Array.from({ length: total }, (_, i) => inicio + i)
   }
 
   const toggleNumero = (n) => {
-    if (vendidos.includes(n)) return
+    if (ocupados.includes(n)) return
 
     setSeleccionados(prev =>
       prev.includes(n)
@@ -58,12 +73,18 @@ export default function RifaDetalle() {
 
   const finalizarCompra = async () => {
     if (!nombre || !telefono || !metodoPago) {
-      alert('Completa tus datos para continuar')
+      alert('Completa tus datos')
       return
     }
 
     if (seleccionados.length === 0) {
-      alert('Selecciona al menos un número')
+      alert('Selecciona números')
+      return
+    }
+
+    // 🔥 Seguridad extra
+    if (ocupados.some(n => seleccionados.includes(n))) {
+      alert('Uno de los números ya fue tomado')
       return
     }
 
@@ -76,23 +97,37 @@ export default function RifaDetalle() {
           userId: user ? user.uid : null,
           numero: n,
           estado: 'pendiente',
-          comprador: {
-            nombre,
-            telefono,
-            metodoPago
-          },
+          comprador: { nombre, telefono, metodoPago },
           creadoEn: serverTimestamp()
         })
       }
 
-      alert('Compra registrada correctamente')
+      // 📲 WHATSAPP AL ADMIN
+      const mensaje = `
+🎟 NUEVA COMPRA DE RIFA
+Rifa: ${rifa.titulo}
+Comprador: ${nombre}
+Teléfono: ${telefono}
+Pago: ${metodoPago}
+Números: ${seleccionados.join(', ')}
+`
+
+      const url = `https://wa.me/${573151577499}?text=${encodeURIComponent(
+        mensaje
+      )}`
+
+      window.open(url, '_blank')
+
+      alert('Compra registrada. Espera aprobación.')
+
       setSeleccionados([])
       setNombre('')
       setTelefono('')
       setMetodoPago('')
-    } catch (error) {
-      console.error(error)
-      alert('Error al registrar la compra')
+      cargar()
+    } catch (e) {
+      console.error(e)
+      alert('Error al registrar compra')
     }
 
     setCargando(false)
@@ -100,7 +135,7 @@ export default function RifaDetalle() {
 
   if (!rifa) return <p>Cargando...</p>
 
-  const disponibles = rifa.totalNumeros - vendidos.length
+  const disponibles = rifa.totalNumeros - ocupados.length
 
   return (
     <div className="rifa-container">
@@ -108,41 +143,42 @@ export default function RifaDetalle() {
         <h2>{rifa.titulo}</h2>
 
         <p><b>Lotería:</b> {rifa.loteria}</p>
-        <p>
-          <b>Sorteo:</b>{' '}
-          {rifa.fechaSorteo?.toDate().toLocaleString()}
-        </p>
+        <p><b>Sorteo:</b> {rifa.fechaSorteo?.toDate().toLocaleString()}</p>
 
         <div className="rifa-info">
           <span>Total: {rifa.totalNumeros}</span>
-          <span>Vendidos: {vendidos.length}</span>
+          <span>Ocupados: {ocupados.length}</span>
           <span>Disponibles: {disponibles}</span>
         </div>
 
         <h3>Selecciona tus números</h3>
 
         <div className="numeros-grid">
-          {Array.from({ length: rifa.totalNumeros }, (_, i) => {
-            const num = i + 1
-            const vendido = vendidos.includes(num)
-            const activo = seleccionados.includes(num)
+          {generarNumeros()
+            .filter(n => !ocupados.includes(n)) // 🔥 SOLO DISPONIBLES
+            .map(n => {
+              const activo = seleccionados.includes(n)
 
-            return (
-              <button
-                key={num}
-                className={`numero ${
-                  vendido ? 'vendido' : activo ? 'activo' : ''
-                }`}
-                onClick={() => toggleNumero(num)}
-                disabled={vendido}
-              >
-                {num}
-              </button>
-            )
-          })}
+              const texto =
+                rifa.tipoNumero === 'dos'
+                  ? String(n).padStart(2, '0')
+                  : rifa.tipoNumero === 'cuatro'
+                  ? String(n).padStart(4, '0')
+                  : n
+
+              return (
+                <button
+                  key={n}
+                  className={`numero ${activo ? 'activo' : ''}`}
+                  onClick={() => toggleNumero(n)}
+                >
+                  {texto}
+                </button>
+              )
+            })}
         </div>
 
-        {/* DATOS DEL COMPRADOR */}
+        {/* DATOS COMPRADOR */}
         <div className="datos-comprador">
           <input
             placeholder="Nombre completo"
@@ -184,6 +220,3 @@ export default function RifaDetalle() {
     </div>
   )
 }
-
-
-
