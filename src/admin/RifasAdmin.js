@@ -7,12 +7,14 @@ import {
   addDoc
 } from 'firebase/firestore'
 import { db } from '../firebase/config'
+import '../styles/rifasAdmin.css'
 
 export default function RifasAdmin() {
   const [rifas, setRifas] = useState([])
   const [ventasPorRifa, setVentasPorRifa] = useState({})
   const [numerosGanadores, setNumerosGanadores] = useState({})
-
+  const [editandoId, setEditandoId] = useState(null)
+  const [formEdit, setFormEdit] = useState({})
 
   useEffect(() => {
     cargarRifas()
@@ -39,49 +41,39 @@ export default function RifasAdmin() {
     setRifas(rifasData)
   }
 
-const finalizarRifa = async (rifaId) => {
-  const numeroGanador = Number(numerosGanadores[rifaId])
+  const finalizarRifa = async (rifaId) => {
+    const numeroGanador = Number(numerosGanadores[rifaId])
+    if (!numeroGanador) {
+      alert('Ingresa el número ganador')
+      return
+    }
 
-  if (isNaN(numeroGanador)) {
-    alert('Ingresa un número ganador válido')
-    return
+    const comprasSnap = await getDocs(collection(db, 'compras'))
+    const ganador = comprasSnap.docs.find(c =>
+      c.data().rifaId === rifaId &&
+      c.data().numero === numeroGanador &&
+      c.data().estado === 'aprobado'
+    )
+
+    if (!ganador) {
+      alert('Ese número no fue vendido o no está aprobado')
+      return
+    }
+
+    await addDoc(collection(db, 'ganadores'), {
+      rifaId,
+      numero: numeroGanador,
+      userId: ganador.data().userId || null,
+      creadoEn: new Date()
+    })
+
+    await updateDoc(doc(db, 'rifas', rifaId), {
+      estado: 'finalizada'
+    })
+
+    alert('Rifa finalizada correctamente')
+    cargarRifas()
   }
-
-  const comprasSnap = await getDocs(collection(db, 'compras'))
-
-  const compraGanadora = comprasSnap.docs.find(c =>
-    c.data().rifaId === rifaId &&
-    c.data().numero === numeroGanador &&
-    c.data().estado === 'aprobado'
-  )
-
-  await addDoc(collection(db, 'ganadores'), {
-    rifaId,
-    numero: numeroGanador,
-    ganador: !!compraGanadora,
-    comprador: compraGanadora
-      ? {
-          nombre: compraGanadora.data().comprador?.nombre || '',
-          telefono: compraGanadora.data().comprador?.telefono || '',
-          metodoPago: compraGanadora.data().comprador?.metodoPago || ''
-        }
-      : null,
-    creadoEn: new Date()
-  })
-
-  await updateDoc(doc(db, 'rifas', rifaId), {
-    estado: 'finalizada'
-  })
-
-  alert(
-    compraGanadora
-      ? 'Rifa finalizada con ganador'
-      : 'Rifa finalizada (número no vendido)'
-  )
-
-  cargarRifas()
-}
-
 
   const iniciarEdicion = (rifa) => {
     setEditandoId(rifa.id)
@@ -115,6 +107,7 @@ const finalizarRifa = async (rifaId) => {
       <div className="rifas-grid">
         {rifas.filter(r => r.estado === 'activa').map(r => {
           const vendidos = ventasPorRifa[r.id] || 0
+          const totalRecaudado = vendidos * r.precioNumero
 
           return (
             <div key={r.id} className="rifa-card activa">
@@ -173,6 +166,7 @@ const finalizarRifa = async (rifaId) => {
                   <h3>{r.titulo}</h3>
                   <p><b>Precio:</b> ${r.precioNumero}</p>
                   <p><b>Vendidos:</b> {vendidos}</p>
+                  
                   <p><b>Lotería:</b> {r.loteria}</p>
 
                   <input
@@ -185,6 +179,7 @@ const finalizarRifa = async (rifaId) => {
                       })
                     }
                   />
+                  
 
                   <button className="btn-finalizar" onClick={() => finalizarRifa(r.id)}>
                     Finalizar
