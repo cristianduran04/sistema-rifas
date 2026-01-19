@@ -41,7 +41,7 @@ export default function RifasAdmin() {
     setRifas(rifasData)
   }
 
-  const finalizarRifa = async (rifaId) => {
+ const finalizarRifa = async (rifaId) => {
   const numeroGanador = Number(numerosGanadores[rifaId])
 
   if (isNaN(numeroGanador)) {
