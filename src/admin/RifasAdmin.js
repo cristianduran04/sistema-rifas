@@ -7,7 +7,6 @@ import {
   addDoc
 } from 'firebase/firestore'
 import { db } from '../firebase/config'
-import '../styles/rifasAdmin.css'
 
 export default function RifasAdmin() {
   const [rifas, setRifas] = useState([])
@@ -41,7 +40,7 @@ export default function RifasAdmin() {
     setRifas(rifasData)
   }
 
- const finalizarRifa = async (rifaId) => {
+const finalizarRifa = async (rifaId) => {
   const numeroGanador = Number(numerosGanadores[rifaId])
 
   if (isNaN(numeroGanador)) {
@@ -57,7 +56,6 @@ export default function RifasAdmin() {
     c.data().estado === 'aprobado'
   )
 
-  // 🔹 Registrar ganador (vendido o no)
   await addDoc(collection(db, 'ganadores'), {
     rifaId,
     numero: numeroGanador,
@@ -72,7 +70,6 @@ export default function RifasAdmin() {
     creadoEn: new Date()
   })
 
-  // 🔹 Finalizar rifa SIEMPRE
   await updateDoc(doc(db, 'rifas', rifaId), {
     estado: 'finalizada'
   })
@@ -119,7 +116,6 @@ export default function RifasAdmin() {
       <div className="rifas-grid">
         {rifas.filter(r => r.estado === 'activa').map(r => {
           const vendidos = ventasPorRifa[r.id] || 0
-          const totalRecaudado = vendidos * r.precioNumero
 
           return (
             <div key={r.id} className="rifa-card activa">
@@ -178,7 +174,6 @@ export default function RifasAdmin() {
                   <h3>{r.titulo}</h3>
                   <p><b>Precio:</b> ${r.precioNumero}</p>
                   <p><b>Vendidos:</b> {vendidos}</p>
-                  
                   <p><b>Lotería:</b> {r.loteria}</p>
 
                   <input
@@ -191,7 +186,6 @@ export default function RifasAdmin() {
                       })
                     }
                   />
-                  
 
                   <button className="btn-finalizar" onClick={() => finalizarRifa(r.id)}>
                     Finalizar
