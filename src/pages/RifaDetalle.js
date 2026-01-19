@@ -14,14 +14,14 @@ import {
 import { useAuth } from '../context/AuthContext'
 import '../styles/rifaDetalle.css'
 
-const WHATSAPP_ADMIN = '573001234567' // 🔥 CAMBIA ESTE NÚMERO
+const WHATSAPP_ADMIN = '573151577499' // ✅ USADO
 
 export default function RifaDetalle() {
   const { id } = useParams()
   const { user } = useAuth()
 
   const [rifa, setRifa] = useState(null)
-  const [ocupados, setOcupados] = useState([]) // aprobados + pendientes
+  const [ocupados, setOcupados] = useState([])
   const [seleccionados, setSeleccionados] = useState([])
   const [cargando, setCargando] = useState(false)
 
@@ -30,28 +30,26 @@ export default function RifaDetalle() {
   const [metodoPago, setMetodoPago] = useState('')
 
   useEffect(() => {
+    const cargar = async () => {
+      const rifaSnap = await getDoc(doc(db, 'rifas', id))
+      if (!rifaSnap.exists()) return
+
+      const rifaData = { id: rifaSnap.id, ...rifaSnap.data() }
+      setRifa(rifaData)
+
+      const comprasQ = query(
+        collection(db, 'compras'),
+        where('rifaId', '==', id),
+        where('estado', 'in', ['pendiente', 'aprobado'])
+      )
+
+      const comprasSnap = await getDocs(comprasQ)
+      setOcupados(comprasSnap.docs.map(d => d.data().numero))
+    }
+
     cargar()
-  }, [])
+  }, [id]) // ✅ DEPENDENCIA CORRECTA
 
-  const cargar = async () => {
-    const rifaSnap = await getDoc(doc(db, 'rifas', id))
-    if (!rifaSnap.exists()) return
-
-    const rifaData = { id: rifaSnap.id, ...rifaSnap.data() }
-    setRifa(rifaData)
-
-    // 🔒 BLOQUEAR aprobados + pendientes
-    const comprasQ = query(
-      collection(db, 'compras'),
-      where('rifaId', '==', id),
-      where('estado', 'in', ['pendiente', 'aprobado'])
-    )
-
-    const comprasSnap = await getDocs(comprasQ)
-    setOcupados(comprasSnap.docs.map(d => d.data().numero))
-  }
-
-  // 🔢 Generar números según tipo
   const generarNumeros = () => {
     if (!rifa) return []
 
@@ -82,7 +80,6 @@ export default function RifaDetalle() {
       return
     }
 
-    // 🔥 Seguridad extra
     if (ocupados.some(n => seleccionados.includes(n))) {
       alert('Uno de los números ya fue tomado')
       return
@@ -102,7 +99,6 @@ export default function RifaDetalle() {
         })
       }
 
-      // 📲 WHATSAPP AL ADMIN
       const mensaje = `
 🎟 NUEVA COMPRA DE RIFA
 Rifa: ${rifa.titulo}
@@ -110,9 +106,9 @@ Comprador: ${nombre}
 Teléfono: ${telefono}
 Pago: ${metodoPago}
 Números: ${seleccionados.join(', ')}
-`
+      `
 
-      const url = `https://wa.me/${573151577499}?text=${encodeURIComponent(
+      const url = `https://wa.me/${WHATSAPP_ADMIN}?text=${encodeURIComponent(
         mensaje
       )}`
 
@@ -124,7 +120,6 @@ Números: ${seleccionados.join(', ')}
       setNombre('')
       setTelefono('')
       setMetodoPago('')
-      cargar()
     } catch (e) {
       console.error(e)
       alert('Error al registrar compra')
@@ -155,7 +150,7 @@ Números: ${seleccionados.join(', ')}
 
         <div className="numeros-grid">
           {generarNumeros()
-            .filter(n => !ocupados.includes(n)) // 🔥 SOLO DISPONIBLES
+            .filter(n => !ocupados.includes(n))
             .map(n => {
               const activo = seleccionados.includes(n)
 
@@ -178,7 +173,6 @@ Números: ${seleccionados.join(', ')}
             })}
         </div>
 
-        {/* DATOS COMPRADOR */}
         <div className="datos-comprador">
           <input
             placeholder="Nombre completo"
@@ -203,20 +197,15 @@ Números: ${seleccionados.join(', ')}
           </select>
         </div>
 
-        <div className="acciones">
-          <p>
-            Seleccionados: {seleccionados.join(', ') || 'Ninguno'}
-          </p>
-
-          <button
-            className="btn-comprar"
-            onClick={finalizarCompra}
-            disabled={cargando}
-          >
-            {cargando ? 'Procesando...' : 'Finalizar compra'}
-          </button>
-        </div>
+        <button
+          className="btn-comprar"
+          onClick={finalizarCompra}
+          disabled={cargando}
+        >
+          {cargando ? 'Procesando...' : 'Finalizar compra'}
+        </button>
       </div>
     </div>
   )
 }
+
