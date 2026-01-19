@@ -12,8 +12,7 @@ export default function RifasAdmin() {
   const [rifas, setRifas] = useState([])
   const [ventasPorRifa, setVentasPorRifa] = useState({})
   const [numerosGanadores, setNumerosGanadores] = useState({})
-  const [editandoId, setEditandoId] = useState(null)
-  const [formEdit, setFormEdit] = useState({})
+
 
   useEffect(() => {
     cargarRifas()
