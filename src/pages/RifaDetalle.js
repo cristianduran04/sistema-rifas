@@ -192,7 +192,7 @@ Números: ${seleccionados.join(', ')}
           >
             <option value="">Método de pago</option>
             <option value="Nequi">Nequi</option>
-            <option value="Daviplata">Daviplata</option>
+            
             <option value="Efectivo">Efectivo</option>
           </select>
         </div>
