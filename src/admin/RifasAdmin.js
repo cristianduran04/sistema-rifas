@@ -42,38 +42,50 @@ export default function RifasAdmin() {
   }
 
   const finalizarRifa = async (rifaId) => {
-    const numeroGanador = Number(numerosGanadores[rifaId])
-    if (!numeroGanador) {
-      alert('Ingresa el número ganador')
-      return
-    }
+  const numeroGanador = Number(numerosGanadores[rifaId])
 
-    const comprasSnap = await getDocs(collection(db, 'compras'))
-    const ganador = comprasSnap.docs.find(c =>
-      c.data().rifaId === rifaId &&
-      c.data().numero === numeroGanador &&
-      c.data().estado === 'aprobado'
-    )
-
-    if (!ganador) {
-      alert('Ese número no fue vendido o no está aprobado')
-      return
-    }
-
-    await addDoc(collection(db, 'ganadores'), {
-      rifaId,
-      numero: numeroGanador,
-      userId: ganador.data().userId || null,
-      creadoEn: new Date()
-    })
-
-    await updateDoc(doc(db, 'rifas', rifaId), {
-      estado: 'finalizada'
-    })
-
-    alert('Rifa finalizada correctamente')
-    cargarRifas()
+  if (isNaN(numeroGanador)) {
+    alert('Ingresa un número ganador válido')
+    return
   }
+
+  const comprasSnap = await getDocs(collection(db, 'compras'))
+
+  const compraGanadora = comprasSnap.docs.find(c =>
+    c.data().rifaId === rifaId &&
+    c.data().numero === numeroGanador &&
+    c.data().estado === 'aprobado'
+  )
+
+  // 🔹 Registrar ganador (vendido o no)
+  await addDoc(collection(db, 'ganadores'), {
+    rifaId,
+    numero: numeroGanador,
+    ganador: !!compraGanadora,
+    comprador: compraGanadora
+      ? {
+          nombre: compraGanadora.data().comprador?.nombre || '',
+          telefono: compraGanadora.data().comprador?.telefono || '',
+          metodoPago: compraGanadora.data().comprador?.metodoPago || ''
+        }
+      : null,
+    creadoEn: new Date()
+  })
+
+  // 🔹 Finalizar rifa SIEMPRE
+  await updateDoc(doc(db, 'rifas', rifaId), {
+    estado: 'finalizada'
+  })
+
+  alert(
+    compraGanadora
+      ? 'Rifa finalizada con ganador'
+      : 'Rifa finalizada (número no vendido)'
+  )
+
+  cargarRifas()
+}
+
 
   const iniciarEdicion = (rifa) => {
     setEditandoId(rifa.id)

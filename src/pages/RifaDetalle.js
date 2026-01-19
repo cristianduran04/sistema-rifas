@@ -1,221 +1,180 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
-import { db } from '../firebase/config'
 import {
-  doc,
-  getDoc,
-  addDoc,
   collection,
   getDocs,
-  serverTimestamp,
-  query,
-  where
+  doc,
+  updateDoc,
+  addDoc
 } from 'firebase/firestore'
-import { useAuth } from '../context/AuthContext'
-import '../styles/rifaDetalle.css'
+import { db } from '../firebase/config'
+import '../styles/rifasAdmin.css'
 
-const WHATSAPP_ADMIN = '573001234567' // 🔥 CAMBIA ESTE NÚMERO
-
-export default function RifaDetalle() {
-  const { id } = useParams()
-  const { user } = useAuth()
-
-  const [rifa, setRifa] = useState(null)
-  const [ocupados, setOcupados] = useState([]) // aprobados + pendientes
-  const [seleccionados, setSeleccionados] = useState([])
-  const [cargando, setCargando] = useState(false)
-
-  const [nombre, setNombre] = useState('')
-  const [telefono, setTelefono] = useState('')
-  const [metodoPago, setMetodoPago] = useState('')
+export default function RifasAdmin() {
+  const [rifas, setRifas] = useState([])
+  const [ventasPorRifa, setVentasPorRifa] = useState({})
+  const [numerosGanadores, setNumerosGanadores] = useState({})
+  const [editandoId, setEditandoId] = useState(null)
+  const [formEdit, setFormEdit] = useState({})
+  const [comprasPorRifa, setComprasPorRifa] = useState({})
+  const [rifaAbierta, setRifaAbierta] = useState(null)
 
   useEffect(() => {
-    cargar()
+    cargarDatos()
   }, [])
 
-  const cargar = async () => {
-    const rifaSnap = await getDoc(doc(db, 'rifas', id))
-    if (!rifaSnap.exists()) return
+  /* ================= CARGAR TODO ================= */
+  const cargarDatos = async () => {
+    const rifasSnap = await getDocs(collection(db, 'rifas'))
+    const comprasSnap = await getDocs(collection(db, 'compras'))
 
-    const rifaData = { id: rifaSnap.id, ...rifaSnap.data() }
-    setRifa(rifaData)
+    const rifasData = rifasSnap.docs.map(d => ({
+      id: d.id,
+      ...d.data()
+    }))
 
-    // 🔒 BLOQUEAR aprobados + pendientes
-    const comprasQ = query(
-      collection(db, 'compras'),
-      where('rifaId', '==', id),
-      where('estado', 'in', ['pendiente', 'aprobado'])
+    const conteo = {}
+    const comprasMap = {}
+
+    comprasSnap.docs.forEach(d => {
+      const c = d.data()
+
+      if (c.estado !== 'aprobado') return
+      if (!c.rifaId) return
+
+      // conteo
+      conteo[c.rifaId] = (conteo[c.rifaId] || 0) + 1
+
+      // compradores
+      if (!comprasMap[c.rifaId]) comprasMap[c.rifaId] = []
+
+      comprasMap[c.rifaId].push({
+        nombre: c.comprador?.nombre || 'Sin nombre',
+        telefono: c.comprador?.telefono || '',
+        metodoPago: c.comprador?.metodoPago || 'No definido',
+        numero: c.numero
+      })
+    })
+
+    setVentasPorRifa(conteo)
+    setComprasPorRifa(comprasMap)
+    setRifas(rifasData)
+  }
+
+  /* ================= FINALIZAR RIFA ================= */
+  const finalizarRifa = async (rifaId) => {
+    const numeroGanador = Number(numerosGanadores[rifaId])
+    if (isNaN(numeroGanador)) {
+      alert('Ingresa un número ganador válido')
+      return
+    }
+
+    const comprasSnap = await getDocs(collection(db, 'compras'))
+    const ganador = comprasSnap.docs.find(c =>
+      c.data().rifaId === rifaId &&
+      c.data().numero === numeroGanador &&
+      c.data().estado === 'aprobado'
     )
 
-    const comprasSnap = await getDocs(comprasQ)
-    setOcupados(comprasSnap.docs.map(d => d.data().numero))
-  }
-
-  // 🔢 Generar números según tipo
-  const generarNumeros = () => {
-    if (!rifa) return []
-
-    let total = rifa.totalNumeros || 0
-    let inicio = rifa.tipoNumero === 'ultimo' ? 0 : 1
-
-    return Array.from({ length: total }, (_, i) => inicio + i)
-  }
-
-  const toggleNumero = (n) => {
-    if (ocupados.includes(n)) return
-
-    setSeleccionados(prev =>
-      prev.includes(n)
-        ? prev.filter(x => x !== n)
-        : [...prev, n]
-    )
-  }
-
-  const finalizarCompra = async () => {
-    if (!nombre || !telefono || !metodoPago) {
-      alert('Completa tus datos')
+    if (!ganador) {
+      alert('Ese número no fue vendido o no está aprobado')
       return
     }
 
-    if (seleccionados.length === 0) {
-      alert('Selecciona números')
-      return
-    }
+    await addDoc(collection(db, 'ganadores'), {
+      rifaId,
+      numero: numeroGanador,
+      nombre: ganador.data().comprador?.nombre || '',
+      metodoPago: ganador.data().comprador?.metodoPago || '',
+      creadoEn: new Date()
+    })
 
-    // 🔥 Seguridad extra
-    if (ocupados.some(n => seleccionados.includes(n))) {
-      alert('Uno de los números ya fue tomado')
-      return
-    }
+    await updateDoc(doc(db, 'rifas', rifaId), {
+      estado: 'finalizada'
+    })
 
-    setCargando(true)
-
-    try {
-      for (const n of seleccionados) {
-        await addDoc(collection(db, 'compras'), {
-          rifaId: id,
-          userId: user ? user.uid : null,
-          numero: n,
-          estado: 'pendiente',
-          comprador: { nombre, telefono, metodoPago },
-          creadoEn: serverTimestamp()
-        })
-      }
-
-      // 📲 WHATSAPP AL ADMIN
-      const mensaje = `
-🎟 NUEVA COMPRA DE RIFA
-Rifa: ${rifa.titulo}
-Comprador: ${nombre}
-Teléfono: ${telefono}
-Pago: ${metodoPago}
-Números: ${seleccionados.join(', ')}
-`
-
-      const url = `https://wa.me/${573151577499}?text=${encodeURIComponent(
-        mensaje
-      )}`
-
-      window.open(url, '_blank')
-
-      alert('Compra registrada. Espera aprobación.')
-
-      setSeleccionados([])
-      setNombre('')
-      setTelefono('')
-      setMetodoPago('')
-      cargar()
-    } catch (e) {
-      console.error(e)
-      alert('Error al registrar compra')
-    }
-
-    setCargando(false)
+    alert('Rifa finalizada correctamente')
+    cargarDatos()
   }
 
-  if (!rifa) return <p>Cargando...</p>
-
-  const disponibles = rifa.totalNumeros - ocupados.length
-
+  /* ================= RENDER ================= */
   return (
-    <div className="rifa-container">
-      <div className="rifa-card">
-        <h2>{rifa.titulo}</h2>
+    <div className="rifas-admin-page">
+      <h2>🎛 Gestión de Rifas</h2>
 
-        <p><b>Lotería:</b> {rifa.loteria}</p>
-        <p><b>Sorteo:</b> {rifa.fechaSorteo?.toDate().toLocaleString()}</p>
+      <h3 className="section-title">🟢 Rifas Activas</h3>
 
-        <div className="rifa-info">
-          <span>Total: {rifa.totalNumeros}</span>
-          <span>Ocupados: {ocupados.length}</span>
-          <span>Disponibles: {disponibles}</span>
-        </div>
+      <div className="rifas-grid">
+        {rifas.filter(r => r.estado === 'activa').map(r => {
+          const vendidos = ventasPorRifa[r.id] || 0
+          const total = vendidos * r.precioNumero
 
-        <h3>Selecciona tus números</h3>
+          return (
+            <div key={r.id} className="rifa-card activa">
+              <h3>{r.titulo}</h3>
 
-        <div className="numeros-grid">
-          {generarNumeros()
-            .filter(n => !ocupados.includes(n)) // 🔥 SOLO DISPONIBLES
-            .map(n => {
-              const activo = seleccionados.includes(n)
+              <p><b>Precio:</b> ${r.precioNumero}</p>
+              <p><b>Vendidos:</b> {vendidos}</p>
+              <p><b>Lotería:</b> {r.loteria}</p>
 
-              const texto =
-                rifa.tipoNumero === 'dos'
-                  ? String(n).padStart(2, '0')
-                  : rifa.tipoNumero === 'cuatro'
-                  ? String(n).padStart(4, '0')
-                  : n
+              <div className="total-recaudado">
+                Total recaudado: ${total}
+              </div>
 
-              return (
-                <button
-                  key={n}
-                  className={`numero ${activo ? 'activo' : ''}`}
-                  onClick={() => toggleNumero(n)}
-                >
-                  {texto}
-                </button>
-              )
-            })}
-        </div>
+              <input
+                type="number"
+                placeholder="Número ganador"
+                onChange={e =>
+                  setNumerosGanadores({
+                    ...numerosGanadores,
+                    [r.id]: e.target.value
+                  })
+                }
+              />
 
-        {/* DATOS COMPRADOR */}
-        <div className="datos-comprador">
-          <input
-            placeholder="Nombre completo"
-            value={nombre}
-            onChange={e => setNombre(e.target.value)}
-          />
+              <button
+                className="btn-finalizar"
+                onClick={() => finalizarRifa(r.id)}
+              >
+                Finalizar
+              </button>
 
-          <input
-            placeholder="Teléfono"
-            value={telefono}
-            onChange={e => setTelefono(e.target.value)}
-          />
+              <button
+                className="btn-ver"
+                onClick={() =>
+                  setRifaAbierta(rifaAbierta === r.id ? null : r.id)
+                }
+              >
+                {rifaAbierta === r.id
+                  ? 'Ocultar compradores'
+                  : 'Ver compradores'}
+              </button>
 
-          <select
-            value={metodoPago}
-            onChange={e => setMetodoPago(e.target.value)}
-          >
-            <option value="">Método de pago</option>
-            <option value="Nequi">Nequi</option>
-            <option value="Daviplata">Daviplata</option>
-            <option value="Efectivo">Efectivo</option>
-          </select>
-        </div>
+              {/* ===== LISTA COMPRADORES ===== */}
+              {rifaAbierta === r.id && (
+                <div className="compradores-box">
+                  <h4>🧾 Compradores</h4>
 
-        <div className="acciones">
-          <p>
-            Seleccionados: {seleccionados.join(', ') || 'Ninguno'}
-          </p>
-
-          <button
-            className="btn-comprar"
-            onClick={finalizarCompra}
-            disabled={cargando}
-          >
-            {cargando ? 'Procesando...' : 'Finalizar compra'}
-          </button>
-        </div>
+                  {comprasPorRifa[r.id]?.length ? (
+                    <ul>
+                      {comprasPorRifa[r.id].map((c, i) => (
+                        <li key={i}>
+                          <b>{c.nombre}</b> — Nº{' '}
+                          {String(c.numero).padStart(
+                            r.cifras || 2,
+                            '0'
+                          )}{' '}
+                          — {c.metodoPago}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="sin-compras">Sin ventas aún</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
     </div>
   )

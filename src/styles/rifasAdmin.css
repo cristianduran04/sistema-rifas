@@ -120,3 +120,33 @@
   color: #000;                /* negro */
   font-size: 1.1rem;
 }
+
+
+
+
+
+
+
+
+
+
+.compradores-box {
+  margin-top: 10px;
+  background: #f7f7f7;
+  padding: 8px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.compradores-box ul {
+  padding-left: 15px;
+}
+
+.compradores-box li {
+  margin-bottom: 4px;
+}
+
+.sin-compras {
+  font-style: italic;
+  color: #777;
+}

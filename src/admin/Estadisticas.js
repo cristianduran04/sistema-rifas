@@ -17,20 +17,27 @@ export default function Estadisticas() {
       const rifasSnap = await getDocs(collection(db, 'rifas'))
       const comprasSnap = await getDocs(collection(db, 'compras'))
 
+      // 🔹 MAPA DE PRECIOS POR RIFA
+      const preciosPorRifa = {}
       let activas = 0
       let finalizadas = 0
-      let ingresos = 0
 
       rifasSnap.docs.forEach(d => {
         const r = d.data()
+        preciosPorRifa[d.id] = r.precioNumero || 0
+
         if (r.estado === 'activa') activas++
         if (r.estado === 'finalizada') finalizadas++
       })
 
+      let ingresos = 0
+      let comprasAprobadas = 0
+
       comprasSnap.docs.forEach(d => {
         const c = d.data()
         if (c.estado === 'aprobado') {
-          ingresos += c.precio || 0
+          ingresos += preciosPorRifa[c.rifaId] || 0
+          comprasAprobadas++
         }
       })
 
@@ -38,7 +45,7 @@ export default function Estadisticas() {
         rifas: rifasSnap.size,
         rifasActivas: activas,
         rifasFinalizadas: finalizadas,
-        compras: comprasSnap.size,
+        compras: comprasAprobadas,
         ingresos
       })
     }
@@ -67,7 +74,7 @@ export default function Estadisticas() {
         </div>
 
         <div className="stat-card">
-          <h3>🛒 Compras</h3>
+          <h3>🛒 Compras aprobadas</h3>
           <p>{stats.compras}</p>
         </div>
 
@@ -79,4 +86,5 @@ export default function Estadisticas() {
     </div>
   )
 }
+
 
